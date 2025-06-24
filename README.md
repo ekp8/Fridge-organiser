@@ -1,4 +1,4 @@
-# Fridge Organizer 🧊🥬
+# Fridge Organizer 
 
 A mobile app for tracking what’s in your fridge, managing expiry dates, and reducing food waste—built with Expo + React Native.
 
