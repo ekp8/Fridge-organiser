@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import moment from 'moment';
+import { ScrollView } from 'react-native';
 
 const categories = [
   'None', 'Meat', 'Vegetables', 'Fruits', 'Dairy', 'Drink', 'Leftover', 'Snack', 'Meal Prep', 'Herb'
@@ -40,22 +41,37 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
 
   const [quantityInput, setQuantityInput] = useState('1');
   const [freshDaysInput, setFreshDaysInput] = useState('3');
+  const [freshUnit, setFreshUnit] = useState('days');
 
 
 
   useEffect(() => {
-  if (editingItem) {
-    setName(editingItem.name);
-    setShelf(editingItem.shelf);
-    setCategory(editingItem.category);
-    setQuantity(editingItem.quantity);
-    setQuantityInput(editingItem.quantity.toString());
-    setStorage(editingItem.storage);
-    const days = moment(editingItem.expires).diff(moment(), 'days');
-    setFreshDays(days);
-    setFreshDaysInput(days.toString());
-    setImage(editingItem.image || null);
-  } else {
+    if (editingItem) {
+      setName(editingItem.name);
+      setShelf(editingItem.shelf);
+      setCategory(editingItem.category);
+      setQuantity(editingItem.quantity);
+      setQuantityInput(editingItem.quantity.toString());
+      setStorage(editingItem.storage);
+
+      // Calculate the best unit and value for freshness
+      const expires = moment(editingItem.expires);
+      const now = moment().startOf('day');
+      let unit = 'days';
+      let value = expires.diff(now, 'days');
+
+      if (value % 7 === 0 && value >= 7) {
+        unit = 'weeks';
+        value = expires.diff(now, 'weeks');
+      } else if (value % 30 === 0 && value >= 30) {
+        unit = 'months';
+        value = expires.diff(now, 'months');
+      }
+
+      setFreshDaysInput(value.toString());
+      setFreshUnit(unit);
+      setImage(editingItem.image || null);
+    } else {
     setName('');
     setShelf((shelves && shelves.length > 0) ? shelves[0] : '');
     setCategory('None');
@@ -71,27 +87,36 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
 
 
 
-const handleAdd = () => {
-  const quantity = Math.max(1, parseInt(quantityInput, 10) || 1);
-  const freshDays = Math.max(1, parseInt(freshDaysInput, 10) || 1);
-  if (!name.trim()) {
-    alert('Please enter the item name.');
-    return;
-  }
-  const expires = moment().add(freshDays, 'days').format('YYYY-MM-DD');
-  onAdd({
-    id: editingItem ? editingItem.id : Date.now().toString(),
-    name,
-    shelf,
-    category, 
-    quantity,
-    storage,
-    expires,
-    image,
-  });
-  onClose();
-  // ...reset fields as before...
-};
+  const handleAdd = () => {
+    const quantity = Math.max(1, parseInt(quantityInput, 10) || 1);
+    const freshValue = Math.max(1, parseInt(freshDaysInput, 10) || 1);
+
+    let expires = moment();
+    if (freshUnit === 'days') {
+      expires = expires.add(freshValue, 'days');
+    } else if (freshUnit === 'weeks') {
+      expires = expires.add(freshValue, 'weeks');
+    } else if (freshUnit === 'months') {
+      expires = expires.add(freshValue, 'months');
+    }
+    expires = expires.format('YYYY-MM-DD');
+
+    if (!name.trim()) {
+      alert('Please enter the item name.');
+      return;
+    }
+    onAdd({
+      id: editingItem ? editingItem.id : Date.now().toString(),
+      name,
+      shelf,
+      category,
+      quantity,
+      storage,
+      expires,
+      image,
+    });
+    onClose();
+  };
 
 
 
@@ -108,6 +133,10 @@ if (category === 'Vegetables' || category === 'Fruits') {
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.card}>
+          <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        keyboardShouldPersistTaps="handled"
+      >
           <Text style={styles.title}>Add Item</Text>
           <TextInput
             placeholder="Name"
@@ -115,6 +144,17 @@ if (category === 'Vegetables' || category === 'Fruits') {
             onChangeText={setName}
             style={styles.input}
           />
+
+          <View style={styles.imageBox}>
+          {image ? (
+            <Image source={{ uri: image }} style={styles.image} />
+          ) : (
+            <View style={[styles.image, styles.placeholder]}>
+            <Text style={styles.noImageText}>No Image</Text>
+          </View>
+          )}
+        </View>
+
           <Text style={styles.label}>Shelf</Text>
           <Picker
             selectedValue={shelf}
@@ -138,32 +178,16 @@ if (category === 'Vegetables' || category === 'Fruits') {
           <Text style={styles.label}>Quantity</Text>
           
           {/* quantity row */}
-          <View style={styles.row}>
-            <TouchableOpacity
-              onPress={() => {
-                const newQty = Math.max(1, (parseInt(quantityInput, 10) || 1) - 1);
-                setQuantityInput(newQty.toString());
-              }}
-              style={styles.incBtn}
-            >
-              <Text>-</Text>
-            </TouchableOpacity>
-            <TextInput
-              value={quantityInput}
-              onChangeText={v => setQuantityInput(v.replace(/[^0-9]/g, ''))}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1, marginHorizontal: 8 }]}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                const newQty = (parseInt(quantityInput, 10) || 1) + 1;
-                setQuantityInput(newQty.toString());
-              }}
-              style={styles.incBtn}
-            >
-              <Text>+</Text>
-            </TouchableOpacity>
-          </View>
+        <Picker
+          selectedValue={quantityInput}
+          onValueChange={v => setQuantityInput(v.toString())}
+          style={styles.picker}
+          mode="dropdown" // <-- Add this line
+        >
+          {[...Array(50)].map((_, i) => (
+            <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
+          ))}
+        </Picker>
 
 
         {/* storage */}
@@ -181,36 +205,32 @@ if (category === 'Vegetables' || category === 'Fruits') {
 
 
           {/* Fresh up to days row */}
-          <Text style={styles.label}>Fresh up to (days)</Text>
-          
-            <View style={styles.row}>
-            <TouchableOpacity
-              onPress={() => {
-                const newDays = Math.max(1, (parseInt(freshDaysInput, 10) || 1) - 1);
-                setFreshDaysInput(newDays.toString());
-              }}
-              style={styles.incBtn}
-            >
-              <Text>-</Text>
-            </TouchableOpacity>
-            <TextInput
-              value={freshDaysInput}
-              onChangeText={v => setFreshDaysInput(v.replace(/[^0-9]/g, ''))}
-              keyboardType="numeric"
-              style={[styles.input, { flex: 1, marginHorizontal: 8 }]}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                const newDays = (parseInt(freshDaysInput, 10) || 1) + 1;
-                setFreshDaysInput(newDays.toString());
-              }}
-              style={styles.incBtn}
-            >
-              <Text>+</Text>
-            </TouchableOpacity>
-          </View>
-          
-              
+         
+     <Text style={styles.label}>Fresh up to</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Picker
+          selectedValue={freshDaysInput}
+          onValueChange={v => setFreshDaysInput(v.toString())}
+          style={{ flex: 2, height: 60, marginRight: 8 }}
+          mode="dropdown"
+        >
+          {[...Array(30)].map((_, i) => (
+            <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
+          ))}
+        </Picker>
+        <Picker
+          selectedValue={freshUnit}
+          onValueChange={setFreshUnit}
+          style={{ flex: 1, height: 60, minWidth: 90 }}
+          mode="dropdown"
+        >
+          <Picker.Item label="days" value="days" />
+          <Picker.Item label="weeks" value="weeks" />
+          <Picker.Item label="months" value="months" />
+        </Picker>
+      </View>
+
+     
 
       
 
@@ -220,6 +240,7 @@ if (category === 'Vegetables' || category === 'Fruits') {
           <TouchableOpacity onPress={onClose} style={{ marginTop: 10 }}>
             <Text style={{ color: '#999' }}>Cancel</Text>
           </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -239,7 +260,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     margin: 30,
-    borderRadius: 12
+    borderRadius: 12,
+    maxHeight: '90%', // <-- add this line
   },
   title: {
     fontSize: 18,
@@ -253,6 +275,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12
   },
+  picker: {
+    height: 59,
+    minHeight: 36,
+    fontSize: 16,
+    marginBottom: 8,
+  },
   button: {
     backgroundColor: '#1890ff',
     padding: 10,
@@ -262,7 +290,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontWeight: '600'
-  }
+  },
+  imageBox: {
+  alignItems: 'flex-start', // was 'center'
+  marginBottom: 16,
+  },
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+  color: '#aaa',
+  fontSize: 12,
+  fontStyle: 'italic',
+},
+  placeholder: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
 });
 
 // This component provides a modal for adding new items to the fridge inventory.

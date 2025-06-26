@@ -23,30 +23,32 @@ export default function ItemCard({ item, onSendToHistory, onEdit }) {
 
   return (
   <View style={[styles.card, { borderColor: '#e0e0e0', borderWidth: 1 }]}>
-    {/* <View style={[styles.statusBar, { backgroundColor: getBorderColor() }]} /> */}
+  <View style={styles.leftColumn}>
+    <Text
+      style={[
+        styles.namePill,
+        { backgroundColor: bg, color: text, marginBottom: 8, textAlign: 'center' }
+      ]}
+      numberOfLines={2}
+    >
+      {item.name}
+    </Text>
     {item.image ? (
       <Image source={{ uri: item.image }} style={styles.image} />
     ) : (
-      <View style={styles.placeholder} />
+      <View style={[styles.image, styles.placeholder]}>
+      <Text style={styles.noImageText}>No Image</Text>
+    </View>
     )}
-    {/* pill style name */}
-    <View style={styles.info}>
-        <Text
-          style={[
-            styles.namePill,
-            { backgroundColor: bg, color: text }
-          ]}
-        >
-        {item.name}
-      </Text> 
-      <Text>Category: {item.category}</Text>
-      <Text>Qty: {item.quantity}</Text>
-      <Text>Storage: {item.storage}</Text>
-      <Text style={styles.date}>
-        Best before: {moment(item.expires).format('D MMM YYYY')}
-      </Text>
-
-            <View style={{ flexDirection: 'row', marginTop: 8 }}>
+  </View>
+  <View style={styles.info}>
+    <Text>Category: {item.category}</Text>
+    <Text>Quantity: {item.quantity}</Text>
+    <Text>Storage: {item.storage}</Text>
+    <Text style={styles.date}>
+      Best before: {moment(item.expires).format('D MMM YYYY (ddd)')}
+    </Text>
+    <View style={{ flexDirection: 'row', marginTop: 8 }}>
       <TouchableOpacity
         onPress={() => onEdit && onEdit(item)}
         style={[styles.actionBtn, styles.editBtn, { marginRight: 8 }]}
@@ -60,9 +62,8 @@ export default function ItemCard({ item, onSendToHistory, onEdit }) {
         <Text style={styles.historyBtnText}>Send to History</Text>
       </TouchableOpacity>
     </View>
-
-    </View>
   </View>
+</View>
 );
 
 }
@@ -124,6 +125,51 @@ historyBtnText: {
   color: '#2b7a78',           // teal
   fontWeight: 'bold',
   fontSize: 12,
+},
+image: {
+  width: 72,
+  height: 72,
+  borderRadius: 8,
+  backgroundColor: '#eee',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+noImageText: {
+  color: '#aaa',
+  fontSize: 12,
+  fontStyle: 'italic',
+},
+placeholder: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+},
+imageBox: {
+  marginRight: 16,
+},
+info: {
+  flex: 1,
+  justifyContent: 'flex-start',
+},
+leftColumn: {
+  width: 110, // increase from 90 to 110 (or more if you want)
+  alignItems: 'center',
+  marginRight: 24, // increase margin between columns
+},
+info: {
+  flex: 1,
+  justifyContent: 'flex-start',
+  alignItems: 'flex-start', // ensures left alignment
+},
+namePill: {
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 999,
+  fontWeight: 'bold',
+  fontSize: 16,
+  alignSelf: 'center',      // <-- center, not stretch
+  marginBottom: 2,
+  overflow: 'hidden',
+  maxWidth: 90,             // <-- optional: keeps long names from overflowing
 },
   // ...other styles...
 });

@@ -1,17 +1,14 @@
 {
   "expo": {
-    "name": "fridge-organizer",
-    "slug": "fridge-organizer",
+    "name": "Fridge Organizer",
+    "slug": "Fridge-organiser",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+    "icon": "./assets/icon.png",
+    "updates": {
+      "fallbackToCacheTimeout": 0
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
@@ -19,11 +16,15 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "basePath": "/Fridge-organiser"
+    },
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://api.fridgeorganiser.com",
+      "EXPO_PUBLIC_EXPIRY_DAYS_WARNING": 3
     }
   }
 }
