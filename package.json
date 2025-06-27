@@ -21,11 +21,14 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.4",
+    "react-native-reanimated": "^3.18.0",
     "react-native-web": "^0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "gh-pages": "^6.3.0"
+    "@babel/plugin-transform-private-methods": "^7.27.1",
+    "gh-pages": "^6.3.0",
+    "metro-react-native-babel-preset": "^0.77.0"
   },
   "private": true
 }

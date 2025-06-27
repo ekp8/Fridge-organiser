@@ -19,9 +19,11 @@ const herbStorageOptions = [
 
 const generalStorageOptions = [
   'None',
+  'Unopened',
   'Covered',
+  'Cling Wrap',
   'Ziploc Bag',
-  'Cling Wrap'
+  'Vacuum sealed',
 ];
 
 const fruitVegStorageOptions = [
@@ -35,7 +37,7 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
   const [category, setCategory] = useState('None');
   const [quantity, setQuantity] = useState(1);
   const [freshDays, setFreshDays] = useState(3);
-  const [storage, setStorage] = useState('');
+  const [storage, setStorage] = useState('None');
   const [image, setImage] = useState(null);
 
 
@@ -77,7 +79,7 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
     setCategory('None');
     setQuantity(1);
     setQuantityInput('1');
-    setStorage('');
+    setStorage('None');
     setFreshDays(3);
     setFreshDaysInput('3');
     setImage(null);
@@ -89,7 +91,7 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
 
   const handleAdd = () => {
     const quantity = Math.max(1, parseInt(quantityInput, 10) || 1);
-    const freshValue = Math.max(1, parseInt(freshDaysInput, 10) || 1);
+    const freshValue = Math.max(0, parseInt(freshDaysInput, 10) || 0);
 
     let expires = moment();
     if (freshUnit === 'days') {
@@ -132,7 +134,9 @@ if (category === 'Vegetables' || category === 'Fruits') {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
-        <View style={styles.card}>
+
+      <View style={[styles.card, { borderColor: '#e0e0e0', borderWidth: 1 }]}>
+
           <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         keyboardShouldPersistTaps="handled"
@@ -180,7 +184,10 @@ if (category === 'Vegetables' || category === 'Fruits') {
           {/* quantity row */}
         <Picker
           selectedValue={quantityInput}
-          onValueChange={v => setQuantityInput(v.toString())}
+           onValueChange={v => {
+          setQuantityInput(v.toString());
+          setQuantity(Number(v)); // <-- add this line
+        }}
           style={styles.picker}
           mode="dropdown" // <-- Add this line
         >
@@ -209,15 +216,15 @@ if (category === 'Vegetables' || category === 'Fruits') {
      <Text style={styles.label}>Fresh up to</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <Picker
-          selectedValue={freshDaysInput}
-          onValueChange={v => setFreshDaysInput(v.toString())}
-          style={{ flex: 2, height: 60, marginRight: 8 }}
-          mode="dropdown"
-        >
-          {[...Array(30)].map((_, i) => (
-            <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
-          ))}
-        </Picker>
+        selectedValue={freshDaysInput}
+        onValueChange={v => setFreshDaysInput(v.toString())}
+        style={{ flex: 2, height: 60, marginRight: 8 }}
+        mode="dropdown"
+      >
+        {[...Array(31)].map((_, i) => (
+          <Picker.Item key={i} label={`${i}`} value={`${i}`} />
+        ))}
+      </Picker>
         <Picker
           selectedValue={freshUnit}
           onValueChange={setFreshUnit}
@@ -312,6 +319,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
   },
+
 });
 
 // This component provides a modal for adding new items to the fridge inventory.

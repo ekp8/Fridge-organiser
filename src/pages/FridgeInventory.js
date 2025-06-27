@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import moment from 'moment';
 import {
   View,
   Text,
@@ -63,7 +64,15 @@ const handleAddOrEdit = (newItem) => {
   setShowModal(false);
 };
 
-
+const handleReduceQuantity = (item) => {
+  if (item.quantity > 1) {
+    const updated = items.map(i =>
+      i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i
+    );
+    setItems(updated);
+    saveItems(updated);
+  }
+};
 
 const toggleShelf = (shelf) => {
   // If all shelves are open, ignore individual shelf clicks
@@ -89,11 +98,43 @@ const hideAllShelves = () => {
 };
 // ...existing code...
 
+const sampleItems = [
+        {
+          id: 'sample1',
+          name: 'Milk',
+          shelf: 'Top Shelf',
+          category: 'Dairy',
+          quantity: 2,
+          storage: 'Unopened',
+          expires: moment().add(5, 'days').format('YYYY-MM-DD'),
+          isSample: true,
+        },
+        {
+          id: 'sample2',
+          name: 'Beans',
+          shelf: 'Top Shelf',
+          category: 'Leftover',
+          quantity:3,
+          storage: 'Covered',
+          expires: moment().add(3, 'days').format('YYYY-MM-DD'),
+          isSample: true,
+        }
+      ];
 
 
   useEffect(() => {
-    loadItems().then(setItems);
-  }, []);
+  loadItems().then(loaded => {
+    let items = loaded || [];
+    // Add sample items only if missing (by id)
+    sampleItems.forEach(sample => {
+      if (!items.some(i => i.id === sample.id)) {
+        items.unshift(sample); // add to top
+      }
+    });
+    setItems(items);
+    saveItems(items);
+  });
+}, []);
 
   const addItem = (newItem) => {
     const updated = [...items, newItem];
@@ -153,6 +194,7 @@ const hideAllShelves = () => {
                   item={item}
                    onEdit={handleEdit}
                   onSendToHistory={() => { /* implement later */ }}
+                  onReduceQuantity={handleReduceQuantity}
                 />
                 ))
               ) : (

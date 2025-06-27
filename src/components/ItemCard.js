@@ -1,38 +1,109 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import moment from 'moment';
 
 
 const getHighlightColors = (daysLeft) => {
-  if (daysLeft <= 0) return { bg: '#ffeaea', text: '#ff4d4f' };      // pale red
-  if (daysLeft <= 3) return { bg: '#fff7e6', text: '#faad14' };      // pale orange
+  if (daysLeft < 1) return { bg: '#ffeaea', text: '#ff4d4f' };      // pale red
+  if (daysLeft < 3) return { bg: '#fff7e6', text: '#faad14' };      // pale orange
   return { bg: '#e6f7ff', text: '#1890ff' };                         // pale blue/green
 };
 
+function getStatusText(daysLeft) {
+  if (daysLeft < 1) return "Expires today";
+  if (daysLeft < 4) return "Expires soon";
+  return "Still fresh";
+}
 
-export default function ItemCard({ item, onSendToHistory, onEdit }) {
-  const daysLeft = moment(item.expires).diff(moment(), 'days');
+
+export default function ItemCard({ item, onSendToHistory, onEdit, onReduceQuantity }) {
+  const daysLeft = moment(item.expires).startOf('day').diff(moment().startOf('day'), 'days');
   const { bg, text } = getHighlightColors(daysLeft);
   // ...rest of your code...
 
+  //deprecated
   const getBorderColor = () => {
-    if (daysLeft <= 0) return '#ff4d4f';
-    if (daysLeft <= 3) return '#faad14';
+    if (daysLeft < 1) return '#ff4d4f';
+    else if (daysLeft <= 3) return '#faad14';
     return '#1890ff';
   };
 
+
+
+   // Animation setup
+    const [displayQuantity, setDisplayQuantity] = useState(item.quantity);
+const [prevDisplayQuantity, setPrevDisplayQuantity] = useState(item.quantity);
+
+const quantityAnim = useSharedValue(0);
+
+useEffect(() => {
+  setDisplayQuantity(item.quantity);
+  setPrevDisplayQuantity(item.quantity);
+  quantityAnim.value = 0;
+}, [item.id, item.quantity]);
+
+
+const animatedStyle = useAnimatedStyle(() => ({
+  transform: [{ translateY: quantityAnim.value }],
+}));
+
+const handleReduce = () => {
+  if (displayQuantity > 1) {
+    setPrevDisplayQuantity(displayQuantity);
+    setDisplayQuantity(displayQuantity - 1);
+    quantityAnim.value = 0;
+    quantityAnim.value = withTiming(-18, { duration: 700 }, (finished) => {
+      if (finished) {
+        quantityAnim.value = 0;
+        if (onReduceQuantity) runOnJS(onReduceQuantity)(item);
+      }
+    });
+  }
+};
+
   return (
   <View style={[styles.card, { borderColor: '#e0e0e0', borderWidth: 1 }]}>
+      
+      {/* Minus button in top right */}
+          <TouchableOpacity
+  onPress={handleReduce}
+  style={[styles.minusBtn, { backgroundColor: '#ffd6d6' }]}
+>
+  <Text style={styles.minusBtnText}>−</Text>
+</TouchableOpacity>
+
+
   <View style={styles.leftColumn}>
+
+    {item.isSample && (
+          <View style={{
+            backgroundColor: '#ffe58f',
+            paddingHorizontal: 6,
+            borderRadius: 6,
+            alignSelf: 'flex-start',
+            marginBottom: 4
+          }}>
+            <Text style={{ color: '#ad6800', fontSize: 10, fontWeight: 'bold' }}>SAMPLE</Text>
+          </View>
+        )}
+
     <Text
       style={[
         styles.namePill,
         { backgroundColor: bg, color: text, marginBottom: 8, textAlign: 'center' }
       ]}
       numberOfLines={2}
+      adjustsFontSizeToFit
+      minimumFontScale={0.7}
     >
       {item.name}
     </Text>
+
+     <Text style={{ color: text, fontSize: 12, marginBottom: 8, fontStyle: 'italic' }}>
+  {getStatusText(daysLeft)}
+    </Text>
+
     {item.image ? (
       <Image source={{ uri: item.image }} style={styles.image} />
     ) : (
@@ -41,9 +112,25 @@ export default function ItemCard({ item, onSendToHistory, onEdit }) {
     </View>
     )}
   </View>
+
   <View style={styles.info}>
     <Text>Category: {item.category}</Text>
-    <Text>Quantity: {item.quantity}</Text>
+   
+   {/* animate number */}
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+  <Text style={{ marginRight: 4 }}>Quantity:</Text>
+  <View style={{ height: 18, overflow: 'hidden', minWidth: 18 }}>
+    <Animated.View style={animatedStyle}>
+  <Text style={{ height: 18, textAlign: 'center' }}>
+    {prevDisplayQuantity}
+  </Text>
+  <Text style={{ height: 18, textAlign: 'center' }}>
+    {displayQuantity}
+  </Text>
+</Animated.View>
+  </View>
+</View>
+
     <Text>Storage: {item.storage}</Text>
     <Text style={styles.date}>
       Best before: {moment(item.expires).format('D MMM YYYY (ddd)')}
@@ -89,17 +176,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
 
-  namePill: {
-  paddingHorizontal: 14,
-  paddingVertical: 4,
-  borderRadius: 999,
-  fontWeight: 'bold',
-  fontSize: 16,
-  alignSelf: 'flex-start',
-  marginBottom: 2,
-  overflow: 'hidden',
-},
-
 
 actionBtn: {
   paddingVertical: 2,
@@ -111,18 +187,18 @@ actionBtn: {
   marginRight: 0,
 },
 editBtn: {
-  backgroundColor: '#e3e0ff', // soft periwinkle
+  backgroundColor: '#e6f0ff', // refined light blue
 },
 editBtnText: {
-  color: '#5a4fcf',           // muted indigo
+  color: '#1765ad', // refined blue
   fontWeight: 'bold',
   fontSize: 12,
 },
 historyBtn: {
-  backgroundColor: '#e0f7f7', // soft aqua
+  backgroundColor: '#fff7e6', // refined light orang
 },
 historyBtnText: {
-  color: '#2b7a78',           // teal
+  color: '#d48806', // refined orange
   fontWeight: 'bold',
   fontSize: 12,
 },
@@ -169,7 +245,24 @@ namePill: {
   alignSelf: 'center',      // <-- center, not stretch
   marginBottom: 2,
   overflow: 'hidden',
-  maxWidth: 90,             // <-- optional: keeps long names from overflowing
+  maxWidth: 100,             // <-- optional: keeps long names from overflowing
+},
+minusBtn: {
+  position: 'absolute',
+  top: 8,
+  right: 8,
+  backgroundColor: '#ffd6d6', // light red or any color you like
+  borderRadius: 16,
+  width: 28,
+  height: 28,
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 2,
+},
+minusBtnText: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: '#333',
 },
   // ...other styles...
 });
