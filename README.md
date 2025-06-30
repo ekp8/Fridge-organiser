@@ -6,7 +6,7 @@ A mobile app for tracking what’s in your fridge, managing expiry dates, and re
 ## Features
 - Add, edit, and delete fridge items
 - Highlight items expiring soon
-- Local storage using AsyncStorage (or Firebase later?)
+- Local storage using AsyncStorage (or Firebase, may be implemented in a future version)
 - Clean UI with customizable categories
 
 ## Getting Started
