@@ -1,5 +1,6 @@
 # Fridge Organizer
 
+Click here for App: https://fridge-organiser.vercel.app/
 A mobile app for tracking what’s in your fridge, managing expiry dates, and reducing food waste—built with Expo + React Native.
 
 ## Features
@@ -11,6 +12,8 @@ A mobile app for tracking what’s in your fridge, managing expiry dates, and re
 ## Getting Started
 
 25/6/25
-Deployed on vercel instead idk why cannot on github pages, says expo version is 0.24.25 and it should be 7.7, cannot read the website and copy it clearly, when i manually edit it also cannot 
+
+Deployed on vercel: GitHub pages says expo version is 0.24.25 and it should be 7.7
+
 https://fridge-organiser.vercel.app/
 https://vercel.com/ekp8s-projects/fridge-organiser
