@@ -2,7 +2,7 @@
 
 [![Deployed on Vercel](https://img.shields.io/badge/deployed-vercel-brightgreen)](https://fridge-organiser.vercel.app/)
 
-A mobile app for tracking what’s in your fridge, managing expiry dates, and reducing food waste—built with [Expo](https://docs.expo.dev/) + [React Native](https://reactnative.dev/).
+A mobile app for tracking what’s in your fridge, managing expiry dates, and reducing food waste—built with [Expo](https://docs.expo.dev/) and [React Native](https://reactnative.dev/).
 
 ## Features
 
