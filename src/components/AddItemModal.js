@@ -5,7 +5,7 @@ import moment from 'moment';
 import { ScrollView } from 'react-native';
 
 const categories = [
-  'None', 'Meat', 'Vegetables', 'Fruits', 'Dairy', 'Drink', 'Leftover', 'Snack', 'Meal Prep', 'Herb'
+  'None', 'Meat', 'Vegetables', 'Fruits', 'Dairy', 'Drink', 'Leftover', 'Snack', 'Meal Prep', 'Herb', 'Condiment'
 ];
 
 
