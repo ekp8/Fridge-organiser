@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, Image} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import moment from 'moment';
 import { ScrollView } from 'react-native';
@@ -31,6 +31,11 @@ const fruitVegStorageOptions = [
   ...generalStorageOptions,
 ];
 
+const sampleServings = {
+  'Milk': 4, // 4 servings per unit
+  'Beans': 2, // 2 servings per unit
+};
+
 export default function AddItemModal({ visible, onClose, onAdd, shelves, editingItem }) {
   const [name, setName] = useState('');
   const [shelf, setShelf] = useState((shelves && shelves.length > 0) ? shelves[0] : '');
@@ -39,6 +44,8 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
   const [freshDays, setFreshDays] = useState(3);
   const [storage, setStorage] = useState('None');
   const [image, setImage] = useState(null);
+  const [servings, setServings] = useState(1);
+  const [servingsInput, setServingsInput] = useState('1');
 
 
   const [quantityInput, setQuantityInput] = useState('1');
@@ -55,6 +62,8 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
       setQuantity(editingItem.quantity);
       setQuantityInput(editingItem.quantity.toString());
       setStorage(editingItem.storage);
+      setServings(editingItem.servings || 1);
+      setServingsInput((editingItem.servings || 1).toString());
 
       // Calculate the best unit and value for freshness
       const expires = moment(editingItem.expires);
@@ -83,6 +92,8 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
     setFreshDays(3);
     setFreshDaysInput('3');
     setImage(null);
+    setServings(1);
+    setServingsInput('1');
   }
 }, [editingItem, visible]);
 
@@ -107,6 +118,9 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
       alert('Please enter the item name.');
       return;
     }
+    // Use servingsInput for the servings value
+    const parsedServings = Math.max(1, parseInt(servingsInput || '1', 10));
+
     onAdd({
       id: editingItem ? editingItem.id : Date.now().toString(),
       name,
@@ -116,6 +130,7 @@ export default function AddItemModal({ visible, onClose, onAdd, shelves, editing
       storage,
       expires,
       image,
+      servings: parsedServings,
     });
     onClose();
   };
@@ -130,6 +145,12 @@ if (category === 'Vegetables' || category === 'Fruits') {
   availableStorageOptions = herbStorageOptions;
 }
 
+
+  const handleReduceServings = () => {
+    if (servings > 1) {
+      setServings(servings - 1);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -180,21 +201,17 @@ if (category === 'Vegetables' || category === 'Fruits') {
             ))}
           </Picker>
           <Text style={styles.label}>Quantity</Text>
-          
-          {/* quantity row */}
-        <Picker
-          selectedValue={quantityInput}
-           onValueChange={v => {
-          setQuantityInput(v.toString());
-          setQuantity(Number(v)); // <-- add this line
-        }}
-          style={styles.picker}
-          mode="dropdown" // <-- Add this line
-        >
-          {[...Array(50)].map((_, i) => (
-            <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
-          ))}
-        </Picker>
+          <TextInput
+            placeholder=""
+            value={quantityInput}
+            keyboardType="numeric"
+            onChangeText={text => {
+              if (/^\d*$/.test(text)) {
+                setQuantityInput(text);
+              }
+            }}
+            style={styles.input}
+          />
 
 
         {/* storage */}
@@ -237,11 +254,30 @@ if (category === 'Vegetables' || category === 'Fruits') {
         </Picker>
       </View>
 
-     
-
+      <Text style={styles.label}>Servings</Text>
+            <TextInput
+              placeholder=""
+              value={servingsInput}
+              keyboardType="numeric"
+              onChangeText={(text) => {
+                // Allow empty string for editing
+                if (/^\d*$/.test(text)) {
+                  setServingsInput(text);
+                }
+              }}
+              style={styles.input}
+            />
       
 
-          <TouchableOpacity onPress={handleAdd} style={styles.button}>
+          <TouchableOpacity
+            onPress={() => {
+              // On save, update servings from input
+              const parsed = parseInt(servingsInput || '1', 10);
+              setServings(Number.isNaN(parsed) ? 1 : Math.max(1, parsed));
+              handleAdd();
+            }}
+            style={styles.button}
+          >
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose} style={{ marginTop: 10 }}>

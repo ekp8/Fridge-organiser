@@ -64,10 +64,10 @@ const handleAddOrEdit = (newItem) => {
   setShowModal(false);
 };
 
-const handleReduceQuantity = (item) => {
-  if (item.quantity > 1) {
+const handleReduceServings = (item) => {
+  if (typeof item.servings === 'number') {
     const updated = items.map(i =>
-      i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i
+      i.id === item.id ? { ...i, servings: Math.max(0, i.servings - 1) } : i
     );
     setItems(updated);
     saveItems(updated);
@@ -194,7 +194,7 @@ const sampleItems = [
                   item={item}
                    onEdit={handleEdit}
                   onSendToHistory={() => { /* implement later */ }}
-                  onReduceQuantity={handleReduceQuantity}
+                  onReduceServings={handleReduceServings}
                 />
                 ))
               ) : (

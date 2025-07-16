@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import moment from 'moment';
 
@@ -17,7 +17,7 @@ function getStatusText(daysLeft) {
 }
 
 
-export default function ItemCard({ item, onSendToHistory, onEdit, onReduceQuantity }) {
+export default function ItemCard({ item, onSendToHistory, onEdit, onReduceServings }) {
   const daysLeft = moment(item.expires).startOf('day').diff(moment().startOf('day'), 'days');
   const { bg, text } = getHighlightColors(daysLeft);
   // ...rest of your code...
@@ -31,34 +31,12 @@ export default function ItemCard({ item, onSendToHistory, onEdit, onReduceQuanti
 
 
 
-   // Animation setup
-    const [displayQuantity, setDisplayQuantity] = useState(item.quantity);
-const [prevDisplayQuantity, setPrevDisplayQuantity] = useState(item.quantity);
 
-const quantityAnim = useSharedValue(0);
-
-useEffect(() => {
-  setDisplayQuantity(item.quantity);
-  setPrevDisplayQuantity(item.quantity);
-  quantityAnim.value = 0;
-}, [item.id, item.quantity]);
-
-
-const animatedStyle = useAnimatedStyle(() => ({
-  transform: [{ translateY: quantityAnim.value }],
-}));
 
 const handleReduce = () => {
-  if (displayQuantity > 1) {
-    setPrevDisplayQuantity(displayQuantity);
-    setDisplayQuantity(displayQuantity - 1);
-    quantityAnim.value = 0;
-    quantityAnim.value = withTiming(-18, { duration: 700 }, (finished) => {
-      if (finished) {
-        quantityAnim.value = 0;
-        if (onReduceQuantity) runOnJS(onReduceQuantity)(item);
-      }
-    });
+  if (item.servings > 0) {
+    const updatedItem = { ...item, servings: item.servings - 1 };
+    if (onReduceServings) onReduceServings(updatedItem);
   }
 };
 
@@ -115,22 +93,8 @@ const handleReduce = () => {
 
   <View style={styles.info}>
     <Text>Category: {item.category}</Text>
-   
-   {/* animate number */}
-  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-  <Text style={{ marginRight: 4 }}>Quantity:</Text>
-  <View style={{ height: 18, overflow: 'hidden', minWidth: 18 }}>
-    <Animated.View style={animatedStyle}>
-  <Text style={{ height: 18, textAlign: 'center' }}>
-    {prevDisplayQuantity}
-  </Text>
-  <Text style={{ height: 18, textAlign: 'center' }}>
-    {displayQuantity}
-  </Text>
-</Animated.View>
-  </View>
-</View>
-
+    <Text>Quantity: {item.quantity}</Text>
+    <Text>Servings: {item.servings}</Text>
     <Text>Storage: {item.storage}</Text>
     <Text style={styles.date}>
       Best before: {moment(item.expires).format('D MMM YYYY (ddd)')}
