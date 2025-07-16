@@ -1,52 +1,56 @@
-import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 
-const ShelfSelector = ({ shelves, selected, onSelect }) => (
-  <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-    {['All', ...shelves].map((shelf) => (
-      <TouchableOpacity
-        key={shelf}
-        style={[
-          styles.pill,
-          selected === shelf && styles.selectedPill
-        ]}
-        onPress={() => onSelect(shelf)}
+const ShelfSelector = ({ shelves, selected, onSelect, items, onFilter }) => {
+  const [filteredItems, setFilteredItems] = useState(items || []);
+
+  useEffect(() => {
+    if (!items) return;
+    if (selected === 'All') {
+      setFilteredItems(items);
+      onFilter && onFilter(items);
+    } else {
+      const filtered = items.filter(item => item.shelf === selected);
+      setFilteredItems(filtered);
+      onFilter && onFilter(filtered);
+    }
+  }, [selected, items, onFilter]);
+
+  return (
+    <View style={styles.dropdownContainer}>
+      <Text style={styles.dropdownLabel}>Filter by shelf:</Text>
+      <Picker
+        selectedValue={selected}
+        onValueChange={onSelect}
+        style={styles.picker}
       >
-        <Text style={[styles.pillText, selected === shelf && styles.selectedText]}>
-          {shelf}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </ScrollView>
-);
+        <Picker.Item label="All" value="All" />
+        {shelves.map((shelf) => (
+          <Picker.Item key={shelf} label={shelf} value={shelf} />
+        ))}
+      </Picker>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 6,
-    paddingHorizontal: 10
-    // Optionally: height: '100%' if you want it to fill the parent vertically
+  dropdownContainer: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
   },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+  dropdownLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+    color: '#333',
+  },
+  picker: {
     backgroundColor: '#f0f0f0',
-    marginBottom: 10 // vertical spacing
+    borderRadius: 8,
+    height: 44,
   },
-  selectedPill: {
-    backgroundColor: '#1890ff',
-    borderColor: '#1890ff'
-  },
-  pillText: {
-    fontSize: 14,
-    color: '#333'
-  },
-  selectedText: {
-    color: '#fff',
-    fontWeight: '600'
-  }
 });
 
 export default ShelfSelector;
