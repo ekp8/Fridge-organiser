@@ -80,6 +80,8 @@ export default function FridgeInventory() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStorage, setSelectedStorage] = useState('All');
   const [selectedSort, setSelectedSort] = useState('quantity-desc');
+  // Track filter field selection order
+  const [filterStep, setFilterStep] = useState(0); // 0: none, 1: first field, 2: second field
   
   // UI state
   const [showModal, setShowModal] = useState(false);
@@ -284,26 +286,41 @@ export default function FridgeInventory() {
     <View style={{ flex: 1 }}>
       {/* Category, storage, and sort filters */}
       <DynamicFilterSelector
-      shelves={[...fridgeShelves, ...freezerShelves]}
-      occupiedShelves={fridgeShelves.concat(freezerShelves).filter(shelf => items.some(i => i.shelf === shelf))}
+        shelves={[...fridgeShelves, ...freezerShelves]}
+        occupiedShelves={fridgeShelves.concat(freezerShelves).filter(shelf => items.some(i => i.shelf === shelf))}
         categories={categories}
         storages={storages}
         onFilterChange={({ type, value, order }) => {
-          if (type === 'shelf' && value === 'All') {
-            setSelectedShelf('All');
-            setOpenShelves([]);
-          } else if (type === 'shelf') {
-            setSelectedShelf('All');
-            setSelectedCategory('All');
-            setSelectedStorage('All');
-            setSelectedSort('quantity-desc');
+          // Handle shelf selection differently - it immediately changes view
+          if (type === 'shelf') {
             setSelectedShelf(value);
-            setOpenShelves(getAllFilteredShelves());
-          } else {
-            setSelectedShelf('All');
             setSelectedCategory('All');
             setSelectedStorage('All');
             setSelectedSort('quantity-desc');
+            setFilterStep(0); // Reset filter step when changing shelf/section
+            if (value === 'All') {
+              setOpenShelves([]);
+            } else {
+              setOpenShelves(getAllFilteredShelves());
+            }
+            return;
+          }
+
+          // For non-shelf filters, handle the two-step behavior
+          if (filterStep === 0) {
+            // Check if this is a default value - if so, reset immediately
+            if (value === 'All' || (type === 'quantity' && order === 'desc')) {
+              // Reset everything to defaults
+              setSelectedShelf('All');
+              setSelectedCategory('All');
+              setSelectedStorage('All');
+              setSelectedSort('quantity-desc');
+              setOpenShelves([]);
+              setFilterStep(0);
+              return;
+            }
+            
+            // First field selection - update filter state but don't reset shelf view
             if (type === 'category') {
               setSelectedCategory(value);
             } else if (type === 'storage') {
@@ -311,12 +328,33 @@ export default function FridgeInventory() {
             } else if (['quantity', 'servings', 'fresh'].includes(type)) {
               setSelectedSort(`${type}-${order}`);
             }
-            // If selecting "All" for category/storage, or default sort, hide all shelves
+            setFilterStep(1);
+            // Don't change shelf view or open/close shelves yet
+          } else {
+            // Check if this is a default value - if so, reset immediately
             if (value === 'All' || (type === 'quantity' && order === 'desc')) {
+              // Reset everything to defaults
+              setSelectedShelf('All');
+              setSelectedCategory('All');
+              setSelectedStorage('All');
+              setSelectedSort('quantity-desc');
               setOpenShelves([]);
-            } else {
-              setOpenShelves(getAllFilteredShelves());
+              setFilterStep(0);
+              return;
             }
+            
+            // Second field selection - apply the filter and shelf behavior
+            if (type === 'category') {
+              setSelectedCategory(value);
+            } else if (type === 'storage') {
+              setSelectedStorage(value);
+            } else if (['quantity', 'servings', 'fresh'].includes(type)) {
+              setSelectedSort(`${type}-${order}`);
+            }
+            
+            // For non-default values, stay in current section/shelf view
+            // Only open shelves that have filtered items
+            setOpenShelves(getAllFilteredShelves());
           }
         }}
       />
@@ -366,6 +404,7 @@ export default function FridgeInventory() {
                   // Open: filter to section and open shelves
                   setSelectedShelf(sectionTitle);
                   setOpenShelves(sectionShelves);
+                  setFilterStep(0); // Reset filter step when changing to section view
                 }
               } else if (selectedShelf === sectionTitle) {
                 // In section view, clicking same section header: reset to All and close all shelves
@@ -374,10 +413,12 @@ export default function FridgeInventory() {
                 setSelectedStorage('All');
                 setSelectedSort('quantity-desc');
                 setOpenShelves([]);
+                setFilterStep(0); // Reset filter step
               } else {
                 // Switching to different section: filter to new section and open shelves
                 setSelectedShelf(sectionTitle);
                 setOpenShelves(sectionShelves);
+                setFilterStep(0); // Reset filter step when changing sections
               }
             }}
             onEdit={handleEdit}
