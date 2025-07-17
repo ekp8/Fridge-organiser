@@ -11,7 +11,6 @@ export const saveItems = async (items) => {
   }
 };
 
-
 export const loadItems = async () => {
   try {
     const json = await AsyncStorage.getItem(STORAGE_KEY);
@@ -21,6 +20,22 @@ export const loadItems = async () => {
     return [];
   }
 };
+
+// New shelf/section functions
+export async function loadShelves() {
+  try {
+    const json = await AsyncStorage.getItem('shelves');
+    return json ? JSON.parse(json) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function saveShelves(sections) {
+  try {
+    await AsyncStorage.setItem('shelves', JSON.stringify(sections));
+  } catch (e) {}
+}
 
 // You can now use saveItems() and loadItems() in your FridgeInventory screen to persist and retrieve your fridge contents.
 // to add autosave functionality, you can call saveItems() whenever the items change, such as in a useEffect hook or after adding/removing items.

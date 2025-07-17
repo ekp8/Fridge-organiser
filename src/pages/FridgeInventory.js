@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { loadItems, saveItems } from '../services/fridgeDataLocal';
+import { loadShelves, saveShelves } from '../services/fridgeDataLocal';
 import ItemCard from '../components/ItemCard';
 import AddItemModal from '../components/AddItemModal';
 import ShelfSelector from '../components/ShelfSelector';
@@ -87,6 +88,9 @@ export default function FridgeInventory() {
   const [showModal, setShowModal] = useState(false);
   const [openShelves, setOpenShelves] = useState([]); // Start with all shelves closed
   const [editingItem, setEditingItem] = useState(null);
+  
+  // Function to exit rename mode in ShelfSelector
+  const [exitRenameFunction, setExitRenameFunction] = useState(null);
 
   // ============================================================================
   // ITEM MANAGEMENT FUNCTIONS
@@ -174,20 +178,98 @@ export default function FridgeInventory() {
   const allGroups = [...fridgeGroups, ...freezerGroups];
 
   // Build sections for ShelfSelector
-  const sections = [
-    {
-      title: 'Main',
-      shelves: fridgeGroups.filter(g => !g.shelf.includes('Door')),
-    },
-    {
-      title: 'Door',
-      shelves: fridgeGroups.filter(g => g.shelf.includes('Door')),
-    },
-    {
-      title: 'Freezer',
-      shelves: freezerGroups,
-    },
-  ];
+  const [sections, setSections] = useState([
+  {
+    title: 'Main',
+    shelves: fridgeGroups.filter(g => !g.shelf.includes('Door')),
+  },
+  {
+    title: 'Door',
+    shelves: fridgeGroups.filter(g => g.shelf.includes('Door')),
+  },
+  {
+    title: 'Freezer',
+    shelves: freezerGroups,
+  },
+]);
+
+// Load shelves/sections from storage on mount
+useEffect(() => {
+  const initializeSections = async () => {
+    try {
+      const storedSections = await loadShelves();
+      console.log('Loaded sections from storage:', storedSections);
+      
+      if (storedSections && Array.isArray(storedSections) && storedSections.length > 0) {
+        // Validate that each section has the required structure
+        const validSections = storedSections.every(section => 
+          section && section.title && Array.isArray(section.shelves)
+        );
+        if (validSections) {
+          setSections(storedSections);
+          return;
+        } else {
+          console.log('Invalid sections structure, using defaults');
+        }
+      } else {
+        console.log('No stored sections found, using defaults');
+      }
+      
+      // Use defaults - create static shelf objects
+      const defaultSections = [
+        {
+          title: 'Main',
+          shelves: fridgeShelves.filter(shelf => !shelf.includes('Door')).map(shelf => ({ shelf, items: [] })),
+        },
+        {
+          title: 'Door', 
+          shelves: fridgeShelves.filter(shelf => shelf.includes('Door')).map(shelf => ({ shelf, items: [] })),
+        },
+        {
+          title: 'Freezer',
+          shelves: freezerShelves.map(shelf => ({ shelf, items: [] })),
+        },
+      ];
+      setSections(defaultSections);
+      
+    } catch (error) {
+      console.error('Error loading shelves:', error);
+      // Fall back to defaults on error
+      const defaultSections = [
+        {
+          title: 'Main',
+          shelves: fridgeShelves.filter(shelf => !shelf.includes('Door')).map(shelf => ({ shelf, items: [] })),
+        },
+        {
+          title: 'Door',
+          shelves: fridgeShelves.filter(shelf => shelf.includes('Door')).map(shelf => ({ shelf, items: [] })),
+        },
+        {
+          title: 'Freezer',
+          shelves: freezerShelves.map(shelf => ({ shelf, items: [] })),
+        },
+      ];
+      setSections(defaultSections);
+    }
+  };
+  
+  initializeSections();
+}, []);
+
+// Update sections with current filtered items
+useEffect(() => {
+  setSections(prevSections => 
+    prevSections.map(section => ({
+      ...section,
+      shelves: section.shelves.map(shelfGroup => ({
+        ...shelfGroup,
+        items: filteredItems.filter(item => item.shelf === shelfGroup.shelf)
+      }))
+    }))
+  );
+}, [filteredItems]);
+  // Keep sections in sync with items
+  // Remove automatic rebuilding of sections from items
 
   // Apply shelf filtering
   // Section and shelf filtering logic
@@ -291,6 +373,11 @@ export default function FridgeInventory() {
         categories={categories}
         storages={storages}
         onFilterChange={({ type, value, order }) => {
+          // Exit rename mode when any filter is changed
+          if (exitRenameFunction) {
+            exitRenameFunction();
+          }
+          
           // Handle shelf selection differently - it immediately changes view
           if (type === 'shelf') {
             setSelectedShelf(value);
@@ -361,7 +448,13 @@ export default function FridgeInventory() {
 
       {/* Add item button */}
       <TouchableOpacity 
-        onPress={() => setShowModal(true)} 
+        onPress={() => {
+          // Exit rename mode when adding item
+          if (exitRenameFunction) {
+            exitRenameFunction();
+          }
+          setShowModal(true);
+        }} 
         style={styles.addButton}
       >
         <Text style={styles.addButtonText}>+ Add Item</Text>
@@ -370,6 +463,11 @@ export default function FridgeInventory() {
       {/* Show/Hide all shelves toggle */}
       <TouchableOpacity
         onPress={() => {
+          // Exit rename mode when toggling show/hide all
+          if (exitRenameFunction) {
+            exitRenameFunction();
+          }
+          
           if (openShelves.length === getAllFilteredShelves().length) {
             setOpenShelves([]);
           } else {
@@ -393,36 +491,101 @@ export default function FridgeInventory() {
             openShelves={openShelves}
             setOpenShelves={setOpenShelves}
             onSectionFilter={(sectionTitle) => {
+              // Exit rename mode when section is filtered
+              if (exitRenameFunction) {
+                exitRenameFunction();
+              }
               const section = sections.find(s => s.title === sectionTitle);
               const sectionShelves = section ? section.shelves.map(g => g.shelf) : [];
               if (selectedShelf === 'All') {
                 const anySectionOpen = sectionShelves.some(shelf => openShelves.includes(shelf));
                 if (anySectionOpen) {
-                  // Reset: close all shelves, stay in All view
                   setOpenShelves([]);
                 } else {
-                  // Open: filter to section and open shelves
                   setSelectedShelf(sectionTitle);
                   setOpenShelves(sectionShelves);
-                  setFilterStep(0); // Reset filter step when changing to section view
+                  setFilterStep(0);
                 }
               } else if (selectedShelf === sectionTitle) {
-                // In section view, clicking same section header: reset to All and close all shelves
                 setSelectedShelf('All');
                 setSelectedCategory('All');
                 setSelectedStorage('All');
                 setSelectedSort('quantity-desc');
                 setOpenShelves([]);
-                setFilterStep(0); // Reset filter step
+                setFilterStep(0);
               } else {
-                // Switching to different section: filter to new section and open shelves
                 setSelectedShelf(sectionTitle);
                 setOpenShelves(sectionShelves);
-                setFilterStep(0); // Reset filter step when changing sections
+                setFilterStep(0);
               }
             }}
             onEdit={handleEdit}
             onReduceServings={handleReduceServings}
+            // Rename section callback
+            onRenameSection={(sectionIdx, newTitle) => {
+              const newSections = [...sections];
+              newSections[sectionIdx] = {
+                ...newSections[sectionIdx],
+                title: newTitle
+              };
+              setSections(newSections);
+              saveShelves(newSections);
+            }}
+            // Rename shelf callback
+            onRenameShelf={(sectionIdx, shelfIdx, newShelfName) => {
+              const newSections = [...sections];
+              const shelves = [...newSections[sectionIdx].shelves];
+              shelves[shelfIdx] = {
+                ...shelves[shelfIdx],
+                shelf: newShelfName
+              };
+              newSections[sectionIdx].shelves = shelves;
+              setSections(newSections);
+              saveShelves(newSections);
+            }}
+            // Move section up
+            onMoveSectionUp={(idx) => {
+              if (idx > 0) {
+                const newSections = [...sections];
+                [newSections[idx - 1], newSections[idx]] = [newSections[idx], newSections[idx - 1]];
+                setSections(newSections);
+                saveShelves(newSections);
+              }
+            }}
+            // Move section down
+            onMoveSectionDown={(idx) => {
+              if (idx < sections.length - 1) {
+                const newSections = [...sections];
+                [newSections[idx], newSections[idx + 1]] = [newSections[idx + 1], newSections[idx]];
+                setSections(newSections);
+                saveShelves(newSections);
+              }
+            }}
+            // Move shelf up
+            onMoveShelfUp={(sectionIdx, shelfIdx) => {
+              const newSections = [...sections];
+              const shelves = [...newSections[sectionIdx].shelves];
+              if (shelfIdx > 0) {
+                [shelves[shelfIdx - 1], shelves[shelfIdx]] = [shelves[shelfIdx], shelves[shelfIdx - 1]];
+                newSections[sectionIdx].shelves = shelves;
+                setSections(newSections);
+                saveShelves(newSections);
+              }
+            }}
+            // Move shelf down
+            onMoveShelfDown={(sectionIdx, shelfIdx) => {
+              const newSections = [...sections];
+              const shelves = [...newSections[sectionIdx].shelves];
+              if (shelfIdx < shelves.length - 1) {
+                [shelves[shelfIdx], shelves[shelfIdx + 1]] = [shelves[shelfIdx + 1], shelves[shelfIdx]];
+                newSections[sectionIdx].shelves = shelves;
+                setSections(newSections);
+                saveShelves(newSections);
+              }
+            }}
+            onExitRename={(exitFn) => {
+              setExitRenameFunction(() => exitFn);
+            }}
           />
         )}
       </ScrollView>
