@@ -1,0 +1,64 @@
+{
+  // Performance optimizations
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.suggest.autoImports": false,
+  
+  // File watching exclusions to reduce memory usage
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/tmp/**": true,
+    "**/build/**": true,
+    "**/dist/**": true,
+    "**/.expo/**": true
+  },
+  
+  // Search exclusions to improve performance
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/.git": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/.expo": true,
+    "**/ios": true,
+    "**/android": true
+  },
+  
+  // Editor performance settings
+  "editor.codeLens": false,
+  "editor.minimap.enabled": false,
+  "editor.semanticHighlighting.enabled": false,
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.parameterHints.enabled": false,
+  
+  // Workbench performance
+  "workbench.enableExperiments": false,
+  "workbench.settings.enableNaturalLanguageSearch": false,
+  
+  // Extensions
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+  
+  // Telemetry
+  "telemetry.telemetryLevel": "off",
+  
+  // Auto save (can cause lag)
+  "files.autoSave": "off",
+  
+  // Git performance
+  "git.enabled": true,
+  "git.autorefresh": false,
+  "git.autoRepositoryDetection": false,
+  
+  // React Native specific
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact"
+  },
+  "emmet.triggerExpansionOnTab": false,
+  
+  // Terminal performance
+  "terminal.integrated.rendererType": "dom"
+}
