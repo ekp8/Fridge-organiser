@@ -292,21 +292,30 @@ export default function FridgeInventory() {
           if (type === 'shelf' && value === 'All') {
             setSelectedShelf('All');
             setOpenShelves([]);
+          } else if (type === 'shelf') {
+            setSelectedShelf('All');
+            setSelectedCategory('All');
+            setSelectedStorage('All');
+            setSelectedSort('quantity-desc');
+            setSelectedShelf(value);
+            setOpenShelves(getAllFilteredShelves());
           } else {
             setSelectedShelf('All');
             setSelectedCategory('All');
             setSelectedStorage('All');
             setSelectedSort('quantity-desc');
-            setOpenShelves([]);
-            if (type === 'shelf') {
-              setSelectedShelf(value);
-              setOpenShelves(getAllFilteredShelves());
-            } else if (type === 'category') {
+            if (type === 'category') {
               setSelectedCategory(value);
             } else if (type === 'storage') {
               setSelectedStorage(value);
             } else if (['quantity', 'servings', 'fresh'].includes(type)) {
               setSelectedSort(`${type}-${order}`);
+            }
+            // If selecting "All" for category/storage, or default sort, hide all shelves
+            if (value === 'All' || (type === 'quantity' && order === 'desc')) {
+              setOpenShelves([]);
+            } else {
+              setOpenShelves(getAllFilteredShelves());
             }
           }
         }}
