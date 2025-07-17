@@ -83,7 +83,7 @@ export default function FridgeInventory() {
   
   // UI state
   const [showModal, setShowModal] = useState(false);
-  const [openShelves, setOpenShelves] = useState([]);
+  const [openShelves, setOpenShelves] = useState([]); // Start with all shelves closed
   const [editingItem, setEditingItem] = useState(null);
 
   // ============================================================================
@@ -144,42 +144,6 @@ export default function FridgeInventory() {
   };
 
   // ============================================================================
-  // SHELF VISIBILITY FUNCTIONS
-  // ============================================================================
-
-  /**
-   * Toggles the visibility of a specific shelf
-   * @param {string} shelf - The shelf name to toggle
-   */
-  const toggleShelf = (shelf) => {
-    // If all shelves are open, ignore individual shelf clicks
-    if (openShelves.length === fridgeShelves.length + freezerShelves.length) {
-      return;
-    }
-    // If this shelf is already open, close it
-    if (openShelves.includes(shelf)) {
-      setOpenShelves([]);
-      return;
-    }
-    // Open only this shelf
-    setOpenShelves([shelf]);
-  };
-
-  /**
-   * Shows all shelves (expands all sections)
-   */
-  const showAllShelves = () => {
-    setOpenShelves([...fridgeShelves, ...freezerShelves]);
-  };
-
-  /**
-   * Hides all shelves (collapses all sections)
-   */
-  const hideAllShelves = () => {
-    setOpenShelves([]);
-  };
-
-  // ============================================================================
   // DATA PROCESSING FUNCTIONS
   // ============================================================================
 
@@ -207,10 +171,40 @@ export default function FridgeInventory() {
   const freezerGroups = groupedByShelf(freezerShelves);
   const allGroups = [...fridgeGroups, ...freezerGroups];
 
+  // Build sections for ShelfSelector
+  const sections = [
+    {
+      title: 'Main',
+      shelves: fridgeGroups.filter(g => !g.shelf.includes('Door')),
+    },
+    {
+      title: 'Door',
+      shelves: fridgeGroups.filter(g => g.shelf.includes('Door')),
+    },
+    {
+      title: 'Freezer',
+      shelves: freezerGroups,
+    },
+  ];
+
   // Apply shelf filtering
-  const filteredGroups = selectedShelf === 'All'
-    ? allGroups
-    : allGroups.filter((group) => group.shelf === selectedShelf);
+  // Section filtering logic
+  let filteredSections = sections;
+  if (selectedShelf && selectedShelf !== 'All') {
+    filteredSections = sections.filter(section => section.title === selectedShelf);
+  }
+
+  // Helper to get all shelf names in filteredSections
+  const getAllFilteredShelves = () => {
+    return filteredSections.flatMap(section => section.shelves.map(g => g.shelf));
+  };
+
+  // Ensure shelves stay closed when selectedShelf is 'All'
+  useEffect(() => {
+    if (selectedShelf === 'All') {
+      setOpenShelves([]);
+    }
+  }, [selectedShelf]);
 
   // ============================================================================
   // EFFECTS
@@ -283,33 +277,31 @@ export default function FridgeInventory() {
 
   return (
     <View style={{ flex: 1 }}>
-
-
       {/* Category, storage, and sort filters */}
-
       <DynamicFilterSelector
         shelves={[...fridgeShelves, ...freezerShelves]}
         occupiedShelves={Array.from(new Set(items.map(i => i.shelf).filter(Boolean)))}
         categories={categories}
         storages={storages}
         onFilterChange={({ type, value, order }) => {
-          // Reset all filters
-          setSelectedShelf('All');
-          setSelectedCategory('All');
-          setSelectedStorage('All');
-          setSelectedSort('quantity-desc');
-
-          // Always show all shelves when any filter is selected
-          setOpenShelves([...fridgeShelves, ...freezerShelves]);
-
-          if (type === 'shelf') {
-            setSelectedShelf(value);
-          } else if (type === 'category') {
-            setSelectedCategory(value);
-          } else if (type === 'storage') {
-            setSelectedStorage(value);
-          } else if (['quantity', 'servings', 'fresh'].includes(type)) {
-            setSelectedSort(`${type}-${order}`);
+          if (type === 'shelf' && value === 'All') {
+            setSelectedShelf('All');
+            setOpenShelves([]);
+          } else {
+            setSelectedShelf('All');
+            setSelectedCategory('All');
+            setSelectedStorage('All');
+            setSelectedSort('quantity-desc');
+            setOpenShelves(getAllFilteredShelves());
+            if (type === 'shelf') {
+              setSelectedShelf(value);
+            } else if (type === 'category') {
+              setSelectedCategory(value);
+            } else if (type === 'storage') {
+              setSelectedStorage(value);
+            } else if (['quantity', 'servings', 'fresh'].includes(type)) {
+              setSelectedSort(`${type}-${order}`);
+            }
           }
         }}
       />
@@ -324,45 +316,46 @@ export default function FridgeInventory() {
 
       {/* Show/Hide all shelves toggle */}
       <TouchableOpacity
-        onPress={openShelves.length === fridgeShelves.length + freezerShelves.length ? hideAllShelves : showAllShelves}
+        onPress={() => {
+          if (openShelves.length === getAllFilteredShelves().length) {
+            setOpenShelves([]);
+          } else {
+            setOpenShelves(getAllFilteredShelves());
+          }
+        }}
         style={styles.toggleAllButton}
       >
         <Text style={styles.toggleAllButtonText}>
-          {openShelves.length === fridgeShelves.length + freezerShelves.length ? 'Hide All' : 'Show All'}
+          {openShelves.length === getAllFilteredShelves().length ? 'Hide All' : 'Show All'}
         </Text>
       </TouchableOpacity>
 
-      {/* Main inventory list */}
+      {/* Main inventory list handled by ShelfSelector, now scrollable */}
       <ScrollView contentContainerStyle={styles.container}>
-        {filteredGroups.map((group) => (
-          <View key={group.shelf} style={styles.group}>
-            {/* Shelf header - clickable to toggle */}
-            <TouchableOpacity onPress={() => toggleShelf(group.shelf)} style={styles.pill}>
-              <Text style={styles.shelfTitle}>
-                {group.shelf} {openShelves.includes(group.shelf) ? '▼' : '►'}
-              </Text>
-            </TouchableOpacity>
-            
-            {/* Shelf contents - shown when expanded */}
-            {openShelves.includes(group.shelf) && (
-              <View style={styles.drawer}>
-                {group.items.length > 0 ? (
-                  group.items.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      onEdit={handleEdit}
-                      onSendToHistory={() => { /* TODO: implement history feature */ }}
-                      onReduceServings={handleReduceServings}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyShelfText}>No items on this shelf</Text>
-                )}
-              </View>
-            )}
-          </View>
-        ))}
+        <ShelfSelector
+          sections={filteredSections}
+          openShelves={openShelves}
+          setOpenShelves={setOpenShelves}
+          onSectionFilter={(sectionTitle) => {
+            // Clicking the section header again resets to 'All' and closes all shelves
+            if (selectedShelf === sectionTitle) {
+              setSelectedShelf('All');
+              setSelectedCategory('All');
+              setSelectedStorage('All');
+              setSelectedSort('quantity-desc');
+              setOpenShelves([]); // Close all shelves, including section shelves
+            } else {
+              setSelectedShelf(sectionTitle);
+              // Open all shelves in the selected section
+              const section = sections.find(s => s.title === sectionTitle);
+              if (section) {
+                setOpenShelves(section.shelves.map(g => g.shelf));
+              }
+            }
+          }}
+          onEdit={handleEdit}
+          onReduceServings={handleReduceServings}
+        />
       </ScrollView>
 
       {/* Add/Edit item modal */}
@@ -380,13 +373,9 @@ export default function FridgeInventory() {
   );
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
-
 const styles = StyleSheet.create({
-  container: { 
-    padding: 16 
+  container: {
+    paddingBottom: 20,
   },
   group: { 
     marginBottom: 12 
@@ -440,5 +429,6 @@ const styles = StyleSheet.create({
   },
 });
 // This is the main fridge page that displays items organized by shelf.
+// It includes features for filtering, sorting, and managing items in the fridge and freezer.
 
 
