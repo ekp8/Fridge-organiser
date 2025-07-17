@@ -188,23 +188,28 @@ export default function FridgeInventory() {
   ];
 
   // Apply shelf filtering
-  // Section filtering logic
+  // Section and shelf filtering logic
   let filteredSections = sections;
   if (selectedShelf && selectedShelf !== 'All') {
-    filteredSections = sections.filter(section => section.title === selectedShelf);
+    // If selectedShelf matches a section title, show all shelves in that section
+    const section = sections.find(section => section.title === selectedShelf);
+    if (section) {
+      filteredSections = [section];
+    } else {
+      // If selectedShelf matches a shelf name, show only that shelf in its section
+      filteredSections = sections
+        .map(section => ({
+          ...section,
+          shelves: section.shelves.filter(g => g.shelf === selectedShelf)
+        }))
+        .filter(section => section.shelves.length > 0);
+    }
   }
 
   // Helper to get all shelf names in filteredSections
   const getAllFilteredShelves = () => {
     return filteredSections.flatMap(section => section.shelves.map(g => g.shelf));
   };
-
-  // Ensure shelves stay closed when selectedShelf is 'All'
-  useEffect(() => {
-    if (selectedShelf === 'All') {
-      setOpenShelves([]);
-    }
-  }, [selectedShelf]);
 
   // ============================================================================
   // EFFECTS
@@ -279,8 +284,8 @@ export default function FridgeInventory() {
     <View style={{ flex: 1 }}>
       {/* Category, storage, and sort filters */}
       <DynamicFilterSelector
-        shelves={[...fridgeShelves, ...freezerShelves]}
-        occupiedShelves={Array.from(new Set(items.map(i => i.shelf).filter(Boolean)))}
+      shelves={[...fridgeShelves, ...freezerShelves]}
+      occupiedShelves={fridgeShelves.concat(freezerShelves).filter(shelf => items.some(i => i.shelf === shelf))}
         categories={categories}
         storages={storages}
         onFilterChange={({ type, value, order }) => {
@@ -292,9 +297,10 @@ export default function FridgeInventory() {
             setSelectedCategory('All');
             setSelectedStorage('All');
             setSelectedSort('quantity-desc');
-            setOpenShelves(getAllFilteredShelves());
+            setOpenShelves([]);
             if (type === 'shelf') {
               setSelectedShelf(value);
+              setOpenShelves(getAllFilteredShelves());
             } else if (type === 'category') {
               setSelectedCategory(value);
             } else if (type === 'storage') {
@@ -332,30 +338,43 @@ export default function FridgeInventory() {
 
       {/* Main inventory list handled by ShelfSelector, now scrollable */}
       <ScrollView contentContainerStyle={styles.container}>
-        <ShelfSelector
-          sections={filteredSections}
-          openShelves={openShelves}
-          setOpenShelves={setOpenShelves}
-          onSectionFilter={(sectionTitle) => {
-            // Clicking the section header again resets to 'All' and closes all shelves
-            if (selectedShelf === sectionTitle) {
-              setSelectedShelf('All');
-              setSelectedCategory('All');
-              setSelectedStorage('All');
-              setSelectedSort('quantity-desc');
-              setOpenShelves([]); // Close all shelves, including section shelves
-            } else {
-              setSelectedShelf(sectionTitle);
-              // Open all shelves in the selected section
+        {filteredSections.length === 0 || filteredSections.every(section => section.shelves.length === 0) ? (
+          <Text style={styles.emptyShelfText}>No items on this shelf</Text>
+        ) : (
+          <ShelfSelector
+            sections={filteredSections}
+            openShelves={openShelves}
+            setOpenShelves={setOpenShelves}
+            onSectionFilter={(sectionTitle) => {
               const section = sections.find(s => s.title === sectionTitle);
-              if (section) {
-                setOpenShelves(section.shelves.map(g => g.shelf));
+              const sectionShelves = section ? section.shelves.map(g => g.shelf) : [];
+              if (selectedShelf === 'All') {
+                const anySectionOpen = sectionShelves.some(shelf => openShelves.includes(shelf));
+                if (anySectionOpen) {
+                  // Reset: close all shelves, stay in All view
+                  setOpenShelves([]);
+                } else {
+                  // Open: filter to section and open shelves
+                  setSelectedShelf(sectionTitle);
+                  setOpenShelves(sectionShelves);
+                }
+              } else if (selectedShelf === sectionTitle) {
+                // In section view, clicking same section header: reset to All and close all shelves
+                setSelectedShelf('All');
+                setSelectedCategory('All');
+                setSelectedStorage('All');
+                setSelectedSort('quantity-desc');
+                setOpenShelves([]);
+              } else {
+                // Switching to different section: filter to new section and open shelves
+                setSelectedShelf(sectionTitle);
+                setOpenShelves(sectionShelves);
               }
-            }
-          }}
-          onEdit={handleEdit}
-          onReduceServings={handleReduceServings}
-        />
+            }}
+            onEdit={handleEdit}
+            onReduceServings={handleReduceServings}
+          />
+        )}
       </ScrollView>
 
       {/* Add/Edit item modal */}
@@ -379,13 +398,6 @@ const styles = StyleSheet.create({
   },
   group: { 
     marginBottom: 12 
-  },
-  pill: {
-    backgroundColor: '#e6f7ff',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    marginBottom: 4,
   },
   shelfTitle: { 
     fontSize: 16, 

@@ -1,3 +1,23 @@
+/**
+ * ShelfSelector Component
+ *
+ * Displays fridge/freezer sections and their shelves, allowing users to:
+ * - Toggle shelves open/closed to view items
+ * - Click section headers to filter or reset shelf views
+ * - Edit, send to history, or reduce servings for items via ItemCard
+ *
+ * Props:
+ * - sections: Array of section objects, each with a title and shelves
+ * - openShelves: Array of shelf names currently open
+ * - setOpenShelves: Function to update open shelves
+ * - onSectionFilter: Handler for section header clicks (parent controls logic)
+ * - onEdit, onSendToHistory, onReduceServings: Item actions
+ *
+ * UI:
+ * - Minimalistic section headers
+ * - Collapsible shelf groups
+ * - Drawer-style item display
+ */
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
@@ -22,12 +42,8 @@ const ShelfSelector = ({
 }) => {
   // Section and shelf toggling logic
   const handleSectionToggle = (sectionTitle) => {
-    // Open all shelves in this section and filter to only that section
-    const section = sections.find(sec => sec.title === sectionTitle);
+    // Let the parent component handle all the logic for section filtering
     if (onSectionFilter) onSectionFilter(sectionTitle);
-    if (section && section.shelves) {
-      setOpenShelves(section.shelves.map(s => s.shelf));
-    }
   };
 
   const handleShelfToggle = (shelfName) => {
@@ -51,7 +67,7 @@ const ShelfSelector = ({
             </TouchableOpacity>
             {section.shelves.map((shelf) => (
               <View key={shelf.shelf} style={styles.group}>
-                <TouchableOpacity onPress={() => handleShelfToggle(shelf.shelf)} style={styles.pill}>
+                <TouchableOpacity onPress={() => handleShelfToggle(shelf.shelf)} style={styles.sectionHeader}>
                   <Text style={styles.shelfTitle}>
                     {openShelves.includes(shelf.shelf) ? '▼' : '►'} {shelf.shelf}
                   </Text>
@@ -110,12 +126,15 @@ const styles = StyleSheet.create({
   group: {
     marginBottom: 12,
   },
-  pill: {
-    backgroundColor: '#e6f7ff',
-    borderRadius: 20,
+  // Card outline style for section headers
+  sectionHeader: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#333',
     paddingVertical: 10,
-    paddingHorizontal: 18,
-    marginBottom: 4,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    backgroundColor: 'transparent',
   },
   shelfTitle: {
     fontSize: 16,
